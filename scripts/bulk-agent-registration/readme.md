@@ -196,20 +196,11 @@ If `-ClientSecret` is omitted, the scripts read `A365_CLIENT_SECRET`. Plain-text
 
 ### 6.1 Why this one is not a Graph operation
 
-Key Vault is a separate service with its own data plane and its own token audience. This was verified against a live tenant rather than assumed:
-
-| Probe | Result | Conclusion |
-| --- | --- | --- |
-| `GET /beta/keyVaults, /v1.0/keyVaults, /beta/secrets` | `400` | Microsoft Graph exposes no Key Vault surface at all |
-| Graph token → vault data plane | `401` | The vault rejects a Graph token outright |
-| Vault-audience token → the same request | `403` | Authenticated; only the RBAC role was missing |
-| The same Graph token → /v1.0/organization | `200` | Control: the Graph token was valid |
-
-The 401/403 split is what makes this conclusive. Because the vault answered an authorization question when given a vault-audience token, the 401 was purely about audience. A token is bound to its audience and cannot be exchanged.
+Key Vault is a separate service with its own data plane and token audience. Secret operations use the Key Vault API, not Microsoft Graph, and require a vault-audience token. A Microsoft Graph token cannot authorize these requests.
 
 ### 6.2 Azure RBAC authorization boundary
 
-> **Important: Owner and Contributor cannot read or write secrets.** Key Vault separates its management plane (create and configure vaults) from its data plane (read and write secrets). Owner and Contributor grant the former and have NO dataActions at all. This was confirmed live: a caller holding Contributor on the vault still received 403 on a secret write.
+> **Important: Owner and Contributor cannot read or write secrets.** Key Vault separates its management plane (create and configure vaults) from its data plane (read and write secrets). Owner and Contributor grant the former and have NO dataActions at all.
 
 | Role | Role definition id | Grants |
 | --- | --- | --- |
